@@ -11,7 +11,7 @@ from agent import get_best_move, DIFFICULTY
 grid = None
 selected = None
 valid_moves = []
-turn = "defender"
+turn = "attacker"
 game_over = False
 difficulty = DIFFICULTY["medium"]
 
@@ -99,10 +99,11 @@ def new_game():
     grid = create_board()
     selected = None
     valid_moves = []
-    turn = "defender"
+    turn = "attacker"
     game_over = False
-    status.config(text="Your turn  (Defenders)")
+    status.config(text="AI is thinking ...")
     draw_board()
+    root.after(50, ai_turn)
 
 # -------- member 3 --------
 
