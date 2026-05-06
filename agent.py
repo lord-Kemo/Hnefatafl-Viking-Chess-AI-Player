@@ -1,9 +1,17 @@
+# -------- member 1 --------
+
 import math
 from board import (
     BOARD_SIZE, CORNERS,
     find_king, get_valid_moves, get_all_moves,
     make_move, check_winner,
 )
+
+DIFFICULTY = {
+    "easy":   1,
+    "medium": 3,
+    "hard":   5,
+}
 
 
 def evaluate(grid):
@@ -23,23 +31,24 @@ def evaluate(grid):
         for c in range(BOARD_SIZE):
             if grid[r][c] == "A":
                 attacker_count += 1
-                # attackers near the king is threatening
-                if kr is not None:
+                # attacker encirclement — reward attackers close to king
+                if kr is not None and kc is not None:
                     dist = abs(r - kr) + abs(c - kc)
                     if dist <= 2:
                         score += 3
             elif grid[r][c] == "D":
                 defender_count += 1
 
+    # piece-count advantage
     score += attacker_count * 2
     score -= defender_count * 2
 
-    if kr is not None:
-        # the further the king is from any corner, the better for attackers
+    if kr is not None and kc is not None:
+        # king distance to nearest corner — further = better for attackers
         min_dist = min(abs(kr - cr) + abs(kc - cc) for cr, cc in CORNERS)
         score += min_dist * 5
 
-        # more king mobility = better for defenders
+        # king mobility — more moves = better for defenders
         king_moves = len(get_valid_moves(grid, kr, kc))
         score -= king_moves * 2
 
@@ -98,3 +107,5 @@ def get_best_move(grid, side, depth):
                 best_move = (fr, fc, tr, tc)
 
     return best_move
+
+# -------- member 1 --------

@@ -1,3 +1,5 @@
+# -------- member 2 --------
+
 BOARD_SIZE = 11
 CORNERS = [(0, 0), (0, 10), (10, 0), (10, 10)]
 THRONE = (5, 5)
@@ -67,6 +69,25 @@ def get_valid_moves(grid, row, col):
             c += dc
     return moves
 
+
+def get_all_moves(grid, side):
+    """Get every legal (from_r, from_c, to_r, to_c) for one side."""
+    moves = []
+    for r in range(BOARD_SIZE):
+        for c in range(BOARD_SIZE):
+            p = grid[r][c]
+            if side == "attacker" and p == "A":
+                for mr, mc in get_valid_moves(grid, r, c):
+                    moves.append((r, c, mr, mc))
+            elif side == "defender" and p in ("D", "K"):
+                for mr, mc in get_valid_moves(grid, r, c):
+                    moves.append((r, c, mr, mc))
+    return moves
+
+# -------- member 2 --------
+
+
+# -------- member 3 --------
 
 def make_move(grid, fr, fc, tr, tc):
     """Returns a NEW grid with the move applied and captures resolved."""
@@ -143,6 +164,7 @@ def check_king_capture(grid):
 
 
 def check_winner(grid):
+    """King on a corner -> defenders win. King missing -> attackers win."""
     kr, kc = find_king(grid)
     if kr is None:
         return "attacker"
@@ -150,17 +172,4 @@ def check_winner(grid):
         return "defender"
     return None
 
-
-def get_all_moves(grid, side):
-    """Get every legal (from_r, from_c, to_r, to_c) for one side."""
-    moves = []
-    for r in range(BOARD_SIZE):
-        for c in range(BOARD_SIZE):
-            p = grid[r][c]
-            if side == "attacker" and p == "A":
-                for mr, mc in get_valid_moves(grid, r, c):
-                    moves.append((r, c, mr, mc))
-            elif side == "defender" and p in ("D", "K"):
-                for mr, mc in get_valid_moves(grid, r, c):
-                    moves.append((r, c, mr, mc))
-    return moves
+# -------- member 3 --------
