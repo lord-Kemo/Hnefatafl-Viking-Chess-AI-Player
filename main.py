@@ -15,12 +15,13 @@ turn = "attacker"
 game_over = False
 difficulty = DIFFICULTY["medium"]
 difficulty_selected = False
+human_side = "defender"
 
 
 def on_click(event):
     global selected, valid_moves, turn, grid
 
-    if game_over or turn == "attacker":
+    if game_over or turn != human_side:
         return
     if grid is None:
         return
@@ -43,14 +44,20 @@ def on_click(event):
             end_game(winner)
             return
 
-        turn = "attacker"
+        if human_side == "attacker":
+            turn = "defender"
+        else:
+            turn = "attacker"
         status.config(text="AI is thinking ...")
         root.after(50, ai_turn)
         return
 
-    # otherwise try to select a defender / king
+    # otherwise try to select one of the human's pieces
     piece = grid[row][col]
-    if piece in ("D", "K"):
+    if human_side == "defender" and piece in ("D", "K"):
+        selected = (row, col)
+        valid_moves = get_valid_moves(grid, row, col)
+    elif human_side == "attacker" and piece == "A":
         selected = (row, col)
         valid_moves = get_valid_moves(grid, row, col)
     else:
@@ -63,11 +70,25 @@ def ai_turn():
     global grid, turn
     if grid is None:
         return
+    if game_over:
+        return
 
-    # keep GUI responsive: hard mode still uses depth 5, but with a time cap
-    move = get_best_move(grid, "attacker", difficulty, time_limit_seconds=2.5)
+    ai_side = "attacker"
+    if human_side == "attacker":
+        ai_side = "defender"
+    if turn != ai_side:
+        return
+
+    # higher levels get more thinking time
+    time_limit = 1.0
+    if difficulty == DIFFICULTY["medium"]:
+        time_limit = 2.5
+    elif difficulty == DIFFICULTY["hard"]:
+        time_limit = 6.0
+
+    move = get_best_move(grid, ai_side, difficulty, time_limit_seconds=time_limit)
     if move is None:
-        end_game("defender")
+        end_game(human_side)
         return
 
     fr, fc, tr, tc = move
@@ -79,21 +100,24 @@ def ai_turn():
         end_game(winner)
         return
 
-    if not get_all_moves(grid, "defender"):
-        end_game("attacker")
+    if not get_all_moves(grid, human_side):
+        end_game(ai_side)
         return
 
-    turn = "defender"
-    status.config(text="Your turn  (Defenders)")
+    turn = human_side
+    if human_side == "defender":
+        status.config(text="Your turn  (Defenders)")
+    else:
+        status.config(text="Your turn  (Attackers)")
 
 
 def end_game(winner):
     global game_over
     game_over = True
-    if winner == "defender":
-        status.config(text="You win!  The King escaped!")
+    if winner == human_side:
+        status.config(text="You win!")
     else:
-        status.config(text="AI wins!  The King was captured!")
+        status.config(text="AI wins!")
 
 
 def new_game():
@@ -106,9 +130,15 @@ def new_game():
     valid_moves = []
     turn = "attacker"
     game_over = False
-    status.config(text="AI is thinking ...")
     draw_board()
-    root.after(50, ai_turn)
+    if turn == human_side:
+        if human_side == "defender":
+            status.config(text="Your turn  (Defenders)")
+        else:
+            status.config(text="Your turn  (Attackers)")
+    else:
+        status.config(text="AI is thinking ...")
+        root.after(50, ai_turn)
 
 # -------- member 3 --------
 
@@ -136,7 +166,7 @@ canvas_size = CELL * BOARD_SIZE + PAD * 2
 canvas = tk.Canvas(root, width=canvas_size, height=canvas_size, bg="#000")
 canvas.pack()
 
-status = tk.Label(root, text="Select difficulty to start", font=("Arial", 13))
+status = tk.Label(root, text="Select difficulty and side to start", font=("Arial", 13))
 status.pack(pady=(4, 0))
 
 btn_frame = tk.Frame(root)
@@ -152,6 +182,16 @@ def set_difficulty(d, btn):
     btn.config(relief=tk.SUNKEN)
     new_game()
 
+
+def set_side(side, btn):
+    global human_side
+    human_side = side
+    for b in side_buttons:
+        b.config(relief=tk.RAISED)
+    btn.config(relief=tk.SUNKEN)
+    if difficulty_selected:
+        new_game()
+
 diff_buttons = []
 for label, key in [("Easy", "easy"), ("Medium", "medium"), ("Hard", "hard")]:
     depth = DIFFICULTY[key]
@@ -159,6 +199,15 @@ for label, key in [("Easy", "easy"), ("Medium", "medium"), ("Hard", "hard")]:
     b.config(command=lambda d=depth, b=b: set_difficulty(d, b))
     b.pack(side=tk.LEFT, padx=3)
     diff_buttons.append(b)
+
+tk.Label(btn_frame, text="  ").pack(side=tk.LEFT)
+side_buttons = []
+for label, side in [("Play Defender", "defender"), ("Play Attacker", "attacker")]:
+    b = tk.Button(btn_frame, text=label, width=12)
+    b.config(command=lambda s=side, b=b: set_side(s, b))
+    b.pack(side=tk.LEFT, padx=3)
+    side_buttons.append(b)
+side_buttons[0].config(relief=tk.SUNKEN)
 
 tk.Label(btn_frame, text="  ").pack(side=tk.LEFT)
 new_btn = tk.Button(btn_frame, text="New Game", width=10, command=lambda: new_game())

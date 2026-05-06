@@ -56,6 +56,21 @@ def evaluate(grid):
     return score
 
 
+def order_moves(grid, side, moves):
+    """Try better moves first so alpha-beta cuts more branches."""
+    scored = []
+    for fr, fc, tr, tc in moves:
+        child = make_move(grid, fr, fc, tr, tc)
+        s = evaluate(child)
+        # attackers maximize score, defenders minimize score
+        if side == "attacker":
+            scored.append((s, (fr, fc, tr, tc)))
+        else:
+            scored.append((-s, (fr, fc, tr, tc)))
+    scored.sort(reverse=True)
+    return [m for _, m in scored]
+
+
 def alpha_beta(grid, depth, alpha, beta, is_maximizing, end_time=None):
     """Alpha-beta pruning. Returns the best achievable score."""
     if end_time is not None and time.time() >= end_time:
@@ -69,7 +84,9 @@ def alpha_beta(grid, depth, alpha, beta, is_maximizing, end_time=None):
 
     if is_maximizing:
         best = -math.inf
-        for fr, fc, tr, tc in get_all_moves(grid, "attacker"):
+        moves = get_all_moves(grid, "attacker")
+        moves = order_moves(grid, "attacker", moves)
+        for fr, fc, tr, tc in moves:
             if end_time is not None and time.time() >= end_time:
                 break
             child = make_move(grid, fr, fc, tr, tc)
@@ -81,7 +98,9 @@ def alpha_beta(grid, depth, alpha, beta, is_maximizing, end_time=None):
         return best if best != -math.inf else evaluate(grid)
     else:
         best = math.inf
-        for fr, fc, tr, tc in get_all_moves(grid, "defender"):
+        moves = get_all_moves(grid, "defender")
+        moves = order_moves(grid, "defender", moves)
+        for fr, fc, tr, tc in moves:
             if end_time is not None and time.time() >= end_time:
                 break
             child = make_move(grid, fr, fc, tr, tc)
@@ -100,26 +119,40 @@ def get_best_move(grid, side, depth, time_limit_seconds=None):
     if time_limit_seconds is not None:
         end_time = time.time() + time_limit_seconds
 
-    if side == "attacker":
-        best_score = -math.inf
-        for fr, fc, tr, tc in get_all_moves(grid, "attacker"):
-            if end_time is not None and time.time() >= end_time:
-                break
-            child = make_move(grid, fr, fc, tr, tc)
-            score = alpha_beta(child, depth - 1, -math.inf, math.inf, False, end_time)
-            if score > best_score:
-                best_score = score
-                best_move = (fr, fc, tr, tc)
-    else:
-        best_score = math.inf
-        for fr, fc, tr, tc in get_all_moves(grid, "defender"):
-            if end_time is not None and time.time() >= end_time:
-                break
-            child = make_move(grid, fr, fc, tr, tc)
-            score = alpha_beta(child, depth - 1, -math.inf, math.inf, True, end_time)
-            if score < best_score:
-                best_score = score
-                best_move = (fr, fc, tr, tc)
+    # iterative deepening: keep best from last fully searched depth
+    max_depth = depth
+    for current_depth in range(1, max_depth + 1):
+        if end_time is not None and time.time() >= end_time:
+            break
+
+        if side == "attacker":
+            best_score = -math.inf
+            moves = get_all_moves(grid, "attacker")
+            moves = order_moves(grid, "attacker", moves)
+            for fr, fc, tr, tc in moves:
+                if end_time is not None and time.time() >= end_time:
+                    break
+                child = make_move(grid, fr, fc, tr, tc)
+                score = alpha_beta(
+                    child, current_depth - 1, -math.inf, math.inf, False, end_time
+                )
+                if score > best_score:
+                    best_score = score
+                    best_move = (fr, fc, tr, tc)
+        else:
+            best_score = math.inf
+            moves = get_all_moves(grid, "defender")
+            moves = order_moves(grid, "defender", moves)
+            for fr, fc, tr, tc in moves:
+                if end_time is not None and time.time() >= end_time:
+                    break
+                child = make_move(grid, fr, fc, tr, tc)
+                score = alpha_beta(
+                    child, current_depth - 1, -math.inf, math.inf, True, end_time
+                )
+                if score < best_score:
+                    best_score = score
+                    best_move = (fr, fc, tr, tc)
 
     return best_move
 
