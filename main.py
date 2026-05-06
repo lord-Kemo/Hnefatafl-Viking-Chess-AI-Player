@@ -14,6 +14,7 @@ valid_moves = []
 turn = "attacker"
 game_over = False
 difficulty = DIFFICULTY["medium"]
+difficulty_selected = False
 
 
 def on_click(event):
@@ -63,7 +64,8 @@ def ai_turn():
     if grid is None:
         return
 
-    move = get_best_move(grid, "attacker", difficulty)
+    # keep GUI responsive: hard mode still uses depth 5, but with a time cap
+    move = get_best_move(grid, "attacker", difficulty, time_limit_seconds=2.5)
     if move is None:
         end_game("defender")
         return
@@ -96,6 +98,9 @@ def end_game(winner):
 
 def new_game():
     global grid, selected, valid_moves, turn, game_over
+    if not difficulty_selected:
+        status.config(text="Select difficulty first")
+        return
     grid = create_board()
     selected = None
     valid_moves = []
@@ -131,7 +136,7 @@ canvas_size = CELL * BOARD_SIZE + PAD * 2
 canvas = tk.Canvas(root, width=canvas_size, height=canvas_size, bg="#000")
 canvas.pack()
 
-status = tk.Label(root, text="Your turn  (Defenders)", font=("Arial", 13))
+status = tk.Label(root, text="Select difficulty to start", font=("Arial", 13))
 status.pack(pady=(4, 0))
 
 btn_frame = tk.Frame(root)
@@ -139,11 +144,13 @@ btn_frame.pack(pady=6)
 
 
 def set_difficulty(d, btn):
-    global difficulty
+    global difficulty, difficulty_selected
     difficulty = d
+    difficulty_selected = True
     for b in diff_buttons:
         b.config(relief=tk.RAISED)
     btn.config(relief=tk.SUNKEN)
+    new_game()
 
 diff_buttons = []
 for label, key in [("Easy", "easy"), ("Medium", "medium"), ("Hard", "hard")]:
@@ -152,7 +159,6 @@ for label, key in [("Easy", "easy"), ("Medium", "medium"), ("Hard", "hard")]:
     b.config(command=lambda d=depth, b=b: set_difficulty(d, b))
     b.pack(side=tk.LEFT, padx=3)
     diff_buttons.append(b)
-diff_buttons[1].config(relief=tk.SUNKEN)
 
 tk.Label(btn_frame, text="  ").pack(side=tk.LEFT)
 new_btn = tk.Button(btn_frame, text="New Game", width=10, command=lambda: new_game())
@@ -216,7 +222,6 @@ def draw_board():
 
 
 canvas.bind("<Button-1>", on_click)
-new_game()
 root.mainloop()
 
 # -------- member 4 --------

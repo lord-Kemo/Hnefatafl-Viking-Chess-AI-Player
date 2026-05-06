@@ -1,6 +1,7 @@
 # -------- member 1 --------
 
 import math
+import time
 from board import (
     BOARD_SIZE, CORNERS,
     find_king, get_valid_moves, get_all_moves,
@@ -55,8 +56,11 @@ def evaluate(grid):
     return score
 
 
-def alpha_beta(grid, depth, alpha, beta, is_maximizing):
+def alpha_beta(grid, depth, alpha, beta, is_maximizing, end_time=None):
     """Alpha-beta pruning. Returns the best achievable score."""
+    if end_time is not None and time.time() >= end_time:
+        return evaluate(grid)
+
     winner = check_winner(grid)
     if winner is not None:
         return evaluate(grid)
@@ -66,8 +70,10 @@ def alpha_beta(grid, depth, alpha, beta, is_maximizing):
     if is_maximizing:
         best = -math.inf
         for fr, fc, tr, tc in get_all_moves(grid, "attacker"):
+            if end_time is not None and time.time() >= end_time:
+                break
             child = make_move(grid, fr, fc, tr, tc)
-            val = alpha_beta(child, depth - 1, alpha, beta, False)
+            val = alpha_beta(child, depth - 1, alpha, beta, False, end_time)
             best = max(best, val)
             alpha = max(alpha, val)
             if beta <= alpha:
@@ -76,8 +82,10 @@ def alpha_beta(grid, depth, alpha, beta, is_maximizing):
     else:
         best = math.inf
         for fr, fc, tr, tc in get_all_moves(grid, "defender"):
+            if end_time is not None and time.time() >= end_time:
+                break
             child = make_move(grid, fr, fc, tr, tc)
-            val = alpha_beta(child, depth - 1, alpha, beta, True)
+            val = alpha_beta(child, depth - 1, alpha, beta, True, end_time)
             best = min(best, val)
             beta = min(beta, val)
             if beta <= alpha:
@@ -85,23 +93,30 @@ def alpha_beta(grid, depth, alpha, beta, is_maximizing):
         return best if best != math.inf else evaluate(grid)
 
 
-def get_best_move(grid, side, depth):
+def get_best_move(grid, side, depth, time_limit_seconds=None):
     """Pick the best move for the given side using alpha-beta search."""
     best_move = None
+    end_time = None
+    if time_limit_seconds is not None:
+        end_time = time.time() + time_limit_seconds
 
     if side == "attacker":
         best_score = -math.inf
         for fr, fc, tr, tc in get_all_moves(grid, "attacker"):
+            if end_time is not None and time.time() >= end_time:
+                break
             child = make_move(grid, fr, fc, tr, tc)
-            score = alpha_beta(child, depth - 1, -math.inf, math.inf, False)
+            score = alpha_beta(child, depth - 1, -math.inf, math.inf, False, end_time)
             if score > best_score:
                 best_score = score
                 best_move = (fr, fc, tr, tc)
     else:
         best_score = math.inf
         for fr, fc, tr, tc in get_all_moves(grid, "defender"):
+            if end_time is not None and time.time() >= end_time:
+                break
             child = make_move(grid, fr, fc, tr, tc)
-            score = alpha_beta(child, depth - 1, -math.inf, math.inf, True)
+            score = alpha_beta(child, depth - 1, -math.inf, math.inf, True, end_time)
             if score < best_score:
                 best_score = score
                 best_move = (fr, fc, tr, tc)
